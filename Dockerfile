@@ -20,9 +20,11 @@ USER node
 
 # Allow ENV variables
 ENV N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+ENV N8N_PERSONALIZATION_ENABLED=false
 
 # Stablish the N8N port
 EXPOSE 5678
 
 # Set up and start the workflow
 ENTRYPOINT ["sh", "-c", "set -a; . /home/node/.env; set +a; n8n import:workflow --file /home/node/Agent_Workflow.json && n8n start"]
+
