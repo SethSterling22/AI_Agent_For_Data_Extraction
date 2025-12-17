@@ -1,0 +1,812 @@
+{
+  "name": "Agent-Transcription-To-Export",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "42b39fa3-84fb-490f-b628-74769defd273",
+              "name": "identify_location_prompt",
+              "value": "{   \"task\": \"Identify every location mentioned in the text, including geographic places, establishments, streets, properties, and landmarks.\",   \"output_requirements\": {     \"format\": \"JSON array\",     \"fields\": [       {         \"name\": \"location\",         \"description\": \"Exact name of the place\"       },       {         \"name\": \"text\",         \"description\": \"Full sentence where the location appears\"       },       {         \"name\": \"location_type\",         \"description\": \"Categorized from predefined types\"       },       {         \"name\": \"metadata\",         \"description\": \"Optional context (e.g., near a landmark)\",         \"optional\": true       }     ]   },   \"location_type_categories\": [     \"City\",     \"Country\",     \"Street\",     \"Retail\",     \"Residential\",     \"Natural\",     \"Landmark\",     \"Transportation\",     \"Healthcare\",     \"Government\"   ],   \"instructions\": [     \"Prioritize specificity (e.g., 'Paris, France' over 'Paris').\",     \"Tag partial names with metadata.assumed_full_name if inferable (e.g., 'the White House' → 'White House, Washington DC').\"   ],   \"example_output\": [     {       \"location\": \"Central Park\",       \"text\": \"We walked through Central Park yesterday\",       \"location_type\": \"Landmark\"     },     {       \"location\": \"Starbucks\",       \"text\": \"Let’s meet at Starbucks on Broadway\",       \"location_type\": \"Retail\",       \"metadata\": {         \"near\": \"Broadway\"       }     }   ] }",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        784,
+        -160
+      ],
+      "id": "524b1b8c-ab03-4ab1-b874-7d025f9a74df",
+      "name": "Prompt-1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "42b39fa3-84fb-490f-b628-74769defd273",
+              "name": "deduplication_prompt",
+              "value": "{   \"task\": \"Deduplicate and merge location entries while standardizing names\",   \"output_requirements\": {     \"format\": \"JSON array\",     \"fields\": [       {         \"name\": \"final_name\",         \"description\": \"Standardized name of the location\"       },       {         \"name\": \"type\",         \"description\": \"Location type category\"       },       {         \"name\": \"occurrences\",         \"description\": \"List of original mentions\",         \"subfields\": [           {             \"name\": \"original_text\",             \"description\": \"Raw sentence where location appeared\"           },           {             \"name\": \"original_name\",             \"description\": \"Original location name as mentioned\"           }         ]       },       {         \"name\": \"metadata\",         \"description\": \"Merged contextual data from all occurrences\",         \"optional\": true       }     ]   },   \"rules\": [     \"Merge entries based on spelling, abbreviations and typos\",     \"Use most complete version as final_name\",     \"Preserve all original mentions in occurrences array\",     \"Combine metadata from duplicates\"   ],   \"example\": {     \"input\": [       {\"location\": \"NYC\", \"text\": \"Visited NYC last week\"},       {\"location\": \"New York City\", \"text\": \"Flew to New York City\"}     ],     \"output\": {       \"final_name\": \"New York City\",       \"type\": \"City\",       \"occurrences\": [         {           \"original_text\": \"Visited NYC last week\",           \"original_name\": \"NYC\"         },         {           \"original_text\": \"Flew to New York City\",           \"original_name\": \"New York City\"         }       ],       \"metadata\": {         \"abbreviations\": [\"NYC\"]       }     }   } }",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        784,
+        400
+      ],
+      "id": "7b27dfac-3800-4f99-9ccf-d8445bd15d09",
+      "name": "Prompt-3"
+    },
+    {
+      "parameters": {
+        "content": "## Identify Every Location on Text",
+        "height": 192,
+        "width": 656
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        752,
+        -208
+      ],
+      "typeVersion": 1,
+      "id": "6edd1662-7327-410c-bf76-d81906a4ecb7",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Location Enrichment & Context",
+        "height": 192,
+        "width": 656
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        752,
+        64
+      ],
+      "typeVersion": 1,
+      "id": "9f86f2fd-72a7-49c1-88f7-2a98ac61d350",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Deduplication & Fuzzy Matching",
+        "height": 192,
+        "width": 656
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        752,
+        352
+      ],
+      "typeVersion": 1,
+      "id": "1235ce28-63c9-4681-a06b-89b45f32d7c9",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "42b39fa3-84fb-490f-b628-74769defd273",
+              "name": "=location_&_context_prompt",
+              "value": "{    \"task\": \"Refine extracted locations by categorizing ambiguities, expanding abbreviations, and adding hierarchical context.\",    \"instructions\": [       \"CRITICAL: You must PRESERVE the original 'text' field in the output object. Do not remove it.\"    ],    \"subtasks\": [      {        \"name\": \"Categorize ambiguities\",        \"examples\": [          {            \"input\": \"the office\",            \"output\": {              \"location_type\": \"Commercial\",              \"metadata\": {                \"hint\": \"speaker's workplace\"              }            }          },          {            \"input\": \"downtown\",            \"output\": {              \"location_type\": \"District\",              \"metadata\": {                \"city\": \"[inferred city]\"              }            }          }        ]      },      {        \"name\": \"Expand abbreviations\",        \"examples\": [          {            \"input\": \"SF\",            \"output\": {              \"normalized_name\": \"San Francisco\"            }          }        ]      },      {        \"name\": \"Add hierarchical context\",        \"examples\": [          {            \"input\": \"Brooklyn\",            \"output\": {              \"metadata\": {                \"parent_location\": \"New York City\"              }            }          }        ]      }    ],    \"output_modifications\": {      \"fields\": [        {          \"name\": \"normalized_name\",          \"description\": \"Standardized form of the location name\",          \"optional\": true        },        {           \"name\": \"text\",           \"description\": \"MUST BE PRESERVED from input. The original sentence.\",           \"optional\": false        },        {          \"name\": \"metadata\",          \"description\": \"Additional contextual data\",          \"optional\": true,          \"subfields\": [            {              \"name\": \"parent_location\",              \"description\": \"Hierarchical parent (e.g., city for a district)\",              \"optional\": true            },            {              \"name\": \"alternative_names\",              \"description\": \"List of known aliases\",              \"optional\": true            },            {              \"name\": \"geocoordinates\",              \"description\": \"Derived from context if possible\",              \"optional\": true            }          ]        }      ]    },    \"example_io\": {      \"input\": {        \"location\": \"the Statue\",        \"text\": \"visited the Statue last summer\"      },      \"output\": {        \"location\": \"the Statue\",        \"text\": \"visited the Statue last summer\",         \"normalized_name\": \"Statue of Liberty\",        \"location_type\": \"Landmark\",        \"metadata\": {          \"parent_location\": \"New York Harbor\",          \"alternative_names\": [\"Liberty Island\"]        }      }    } }",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        784,
+        112
+      ],
+      "id": "536013cb-f747-4380-8860-5764c5cccae3",
+      "name": "Prompt-2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.IA_CREDENTIALS }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $env.AI_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.AI_MODEL }}\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt1 || 'ERROR: No se encontró el prompt.' }}\" \n    }\n  ],\n  \"max_tokens\": 4096,\n  \"temperature\": 0.5\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        -160
+      ],
+      "id": "d6c158dd-73d0-42d1-b6f4-eb70b8829ff0",
+      "name": "HTTP Request-1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_CREDENTIALS }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $env.AI_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.AI_MODEL }}\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt2 || 'ERROR: No se encontró el prompt.' }}\" \n    }\n  ],\n  \"max_tokens\": 4096,\n  \"temperature\": 0.5\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        112
+      ],
+      "id": "46eeb0cd-ebce-4270-88ff-03d461daaee9",
+      "name": "HTTP Request-2"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Escapes control characters (like \\n, \\r, \\t) within JSON strings.\n * Ex: Replaces a literal newline in \"hello\\nworld\" with \"hello\\\\nworld\".\n * @param {string} jsonString The string potentially containing unescaped control characters.\n * @returns {string} The corrected string.\n */\nfunction escapeControlCharsInStrings(jsonString) {\n    let fixed = \"\";\n    let inString = false;\n    let escapeNext = false;\n\n    for (let i = 0; i < jsonString.length; i++) {\n        const char = jsonString[i];\n\n        if (escapeNext) {\n            fixed += char;\n            escapeNext = false;\n            continue;\n        }\n\n        if (char === '\\\\') {\n            fixed += '\\\\';\n            escapeNext = true;\n            continue;\n        }\n\n        if (char === '\"') {\n            fixed += '\"';\n            inString = !inString;\n            continue;\n        }\n\n        if (inString) {\n            if (char === '\\n') {\n                fixed += '\\\\n';\n            } else if (char === '\\r') {\n                fixed += '\\\\r';\n            } else if (char === '\\t') {\n                fixed += '\\\\t';\n            } else if (char === '\\b') {\n                fixed += '\\\\b';\n            } else if (char === '\\f') {\n                fixed += '\\\\f';\n            }\n            // Handle other control characters (U+0000 to U+001F)\n            // that do not have a short escape sequence.\n            else if (char.charCodeAt(0) >= 0 && char.charCodeAt(0) <= 31) {\n                let hex = char.charCodeAt(0).toString(16);\n                fixed += '\\\\u' + '0000'.substring(hex.length) + hex;\n            }\n            else {\n                fixed += char;\n            }\n        } else {\n            fixed += char;\n        }\n    }\n    return fixed;\n}\n\n\n/**\n * Fixes invalid escape sequences in a potential JSON string\n * by escaping the backslash itself.\n * Ex: Replaces `\\$` with `\\\\$`, `\\: ` with `\\\\:`, but leaves `\\\"` or `\\\\` or `\\n` (if already escaped) intact.\n * @param {string} jsonString The string potentially containing invalid escapes.\n * @returns {string} The corrected string.\n */\nfunction fixInvalidEscapes(jsonString) {\n    let fixed = \"\";\n    for (let i = 0; i < jsonString.length; i++) {\n        if (jsonString[i] === '\\\\') {\n            if (i + 1 < jsonString.length) {\n                const nextChar = jsonString[i + 1];\n                const validEscapeChars = ['\"', '\\\\', '/', 'b', 'f', 'n', 'r', 't'];\n\n                if (validEscapeChars.includes(nextChar)) {\n                    fixed += '\\\\' + nextChar;\n                    i++;\n                } else if (nextChar === 'u') {\n                    if (i + 5 < jsonString.length && /^[0-9a-fA-F]{4}$/.test(jsonString.substring(i + 2, i + 6))) {\n                        fixed += '\\\\u' + jsonString.substring(i + 2, i + 6);\n                        i += 5;\n                    } else {\n                        fixed += '\\\\\\\\u';\n                        i++;\n                    }\n                } else {\n                    fixed += '\\\\\\\\' + nextChar;\n                    i++;\n                }\n            } else {\n                fixed += '\\\\\\\\';\n            }\n        } else {\n            fixed += jsonString[i];\n        }\n    }\n    return fixed;\n}\n\n/**\n * Attempts to parse a JSON string. Returns the object/array or null on error.\n * Also captures the error message with context.\n * @param {string} jsonString The string to parse.\n * @returns {{ data: object | Array | null, error: string | null }} Parsing result.\n */\nfunction tryParseJsonInternal(jsonString) {\n    try {\n        const data = JSON.parse(jsonString);\n        if (typeof data === 'object' && data !== null) {\n            return { data: data, error: null };\n        } else {\n            return { data: null, error: \"Parsed data is not a JSON object or array.\" };\n        }\n    } catch (e) {\n        let errorMessage = e.message;\n        if (e.message.includes('position')) {\n             try {\n                 const positionMatch = e.message.match(/position\\s+(\\d+)/);\n                 if (positionMatch && positionMatch[1]) {\n                      const position = parseInt(positionMatch[1], 10);\n                      const contextChars = 20;\n                      const start = Math.max(0, position - contextChars);\n                      const end = Math.min(jsonString.length, position + contextChars);\n                      const context = jsonString.substring(start, end);\n                      errorMessage += ` (near: ...${context}...)`;\n                 }\n             } catch (contextError) { /* Ignore error during context generation */ }\n        }\n        return { data: null, error: errorMessage };\n    }\n}\n\n\n/**\n * Attempts to fix unescaped double quotes within JSON strings.\n * @param {string} jsonString The potentially malformed JSON string.\n * @returns {string} The JSON string with an attempted quote fix.\n */\nfunction fixJsonStringQuotes(jsonString) {\n    let fixed = \"\";\n    let inString = false;\n    let escapeNext = false;\n\n    for (let i = 0; i < jsonString.length; i++) {\n        const char = jsonString[i];\n\n        if (escapeNext) { fixed += char; escapeNext = false; continue; }\n        if (char === '\\\\') { fixed += '\\\\'; escapeNext = true; continue; }\n        if (char === '\"') {\n            if (inString) {\n                let nextMeaningfulChar = null;\n                for (let j = i + 1; j < jsonString.length; j++) {\n                    if (!/\\s/.test(jsonString[j])) { nextMeaningfulChar = jsonString[j]; break; }\n                }\n                if (nextMeaningfulChar === null || [':', ',', '}', ']'].includes(nextMeaningfulChar)) {\n                    fixed += '\"'; inString = false;\n                } else { fixed += '\\\\\"'; } // Escape internal quote\n            } else { fixed += '\"'; inString = true; }\n        } else { fixed += char; }\n    }\n    return fixed;\n}\n\n\n/**\n * Extracts potential JSON objects or arrays based on balancing { } and [ ] characters.\n * @param {string} text The source text.\n * @returns {string[]} An array of potentially JSON strings.\n */\nfunction extractPotentialJsonStrings(text) {\n    const results = [];\n    let braceDepth = 0, bracketDepth = 0, startIndex = -1, inString = false, escapeNext = false;\n    for (let i = 0; i < text.length; i++) {\n        const char = text[i];\n        if (escapeNext) { escapeNext = false; continue; }\n        if (char === '\\\\') { escapeNext = true; continue; }\n        if (char === '\"') { inString = !inString; }\n        if (!inString) {\n            if (char === '{') { if (braceDepth === 0 && bracketDepth === 0) startIndex = i; braceDepth++; }\n            else if (char === '}') { if (braceDepth > 0) { braceDepth--; if (braceDepth === 0 && bracketDepth === 0 && startIndex !== -1) { results.push(text.substring(startIndex, i + 1)); startIndex = -1; } } }\n            else if (char === '[') { if (braceDepth === 0 && bracketDepth === 0) startIndex = i; bracketDepth++; }\n            else if (char === ']') { if (bracketDepth > 0) { bracketDepth--; if (braceDepth === 0 && bracketDepth === 0 && startIndex !== -1) { results.push(text.substring(startIndex, i + 1)); startIndex = -1; } } }\n        }\n    }\n    return results;\n}\n\n/**\n * Attempts to fix trailing commas.\n * @param {string} jsonString JSON string potentially with trailing commas.\n * @returns {string} Corrected string.\n */\nfunction fixTrailingCommas(jsonString) {\n    try { return jsonString.replace(/,\\s*([}\\]])/g, '$1'); }\n    catch(e) { return jsonString; }\n}\n\n/**\n * Main function to find and parse the first valid JSON object/array in a text,\n * with pre-cleaning and multiple correction attempts.\n * Merges the keys of the found JSON with parsing metadata.\n *\n * @param {string} text The text potentially containing JSON.\n * @returns {object} An object containing the keys of the parsed JSON (if object)\n *                   or a 'parsed_data' key (if array), and a 'parsing_status' object.\n */\nfunction findAndParseJsonRobustly(text) {\n    let firstParsedData = null;\n    const parsing_status = {\n        success: false,\n        successfulMethod: null,\n        controlCharFixApplied: false, // New flag\n        invalidEscapeFixApplied: false,\n        trailingCommaFixApplied: false,\n        quoteFixApplied: false,\n        parsingLog: [],\n        errors: [],\n        originalInput: text,\n        cleanedInput: null,\n        finalAttemptedJsonString: null\n    };\n\n    if (!text || typeof text !== 'string') {\n        parsing_status.errors.push(\"Input text is null or not a string.\");\n        parsing_status.parsingLog.push(\"Validation failed: Input is not a valid string.\");\n        return { parsing_status };\n    }\n\n    parsing_status.parsingLog.push(\"Starting robust JSON parsing.\");\n\n    let currentText = text.trim();\n    parsing_status.parsingLog.push(`Original length: ${text.length}, Trimmed length: ${currentText.length}`);\n    const markdownBlockRegex = /^```(?:json)?\\s*([\\s\\S]*?)\\s*```$/;\n    const match = currentText.match(markdownBlockRegex);\n    if (match && match[1]) {\n        currentText = match[1].trim();\n        parsing_status.parsingLog.push(\"Detected and removed Markdown code block fences.\");\n    } else {\n        parsing_status.parsingLog.push(\"No Markdown code block fences detected.\");\n    }\n    parsing_status.cleanedInput = currentText;\n    parsing_status.parsingLog.push(`Cleaned text length after potential fence removal: ${currentText.length}`);\n\n    function processSuccess(data, method, flags) {\n        parsing_status.parsingLog.push(`Success with method: ${method}`);\n        parsing_status.success = true;\n        parsing_status.successfulMethod = method;\n        parsing_status.controlCharFixApplied = flags.controlCharFixApplied || false;\n        parsing_status.invalidEscapeFixApplied = flags.invalidEscapeFixApplied || false;\n        parsing_status.trailingCommaFixApplied = flags.trailingCommaFixApplied || false;\n        parsing_status.quoteFixApplied = flags.quoteFixApplied || false;\n        firstParsedData = data;\n    }\n\n    function attemptParseAndFix(textToParse, baseMethodName) {\n        let currentAttemptText = textToParse;\n        let flags = { controlCharFixApplied: false, invalidEscapeFixApplied: false, trailingCommaFixApplied: false, quoteFixApplied: false };\n        let method = baseMethodName;\n        let parseResult;\n\n        // 0. Escape control characters WITHIN strings (BEFORE fixInvalidEscapes)\n        parsing_status.parsingLog.push(`[${baseMethodName}] Applying control character escaping in strings...`);\n        let fixedControlCharsText = escapeControlCharsInStrings(currentAttemptText);\n        if (fixedControlCharsText !== currentAttemptText) {\n            parsing_status.parsingLog.push(`[${baseMethodName}] Control characters in strings escaped.`);\n            flags.controlCharFixApplied = true;\n            currentAttemptText = fixedControlCharsText;\n            method = `${baseMethodName} + Control Char Escape`;\n        } else {\n            parsing_status.parsingLog.push(`[${baseMethodName}] No control characters in strings needed escaping or found.`);\n        }\n        parsing_status.finalAttemptedJsonString = currentAttemptText;\n        parseResult = tryParseJsonInternal(currentAttemptText);\n        if (parseResult.data) { processSuccess(parseResult.data, method, flags); return true; }\n        parsing_status.parsingLog.push(`[${baseMethodName}] Parse failed after control char escape (if any): ${parseResult.error}`);\n        parsing_status.errors.push(`Parse (${method}): ${parseResult.error}`);\n\n\n        // 1. Fix invalid escapes (backslash)\n        parsing_status.parsingLog.push(`[${baseMethodName}] Applying invalid escape fix (escaping backslash)...`);\n        let fixedEscapesText = fixInvalidEscapes(currentAttemptText);\n        if (fixedEscapesText !== currentAttemptText) {\n            parsing_status.parsingLog.push(`[${baseMethodName}] Invalid backslash escapes fixed.`);\n            flags.invalidEscapeFixApplied = true;\n            currentAttemptText = fixedEscapesText;\n            method = `${baseMethodName}${flags.controlCharFixApplied ? ' + Control Char Escape' : ''} + Invalid Escape Fix`;\n        } else {\n            parsing_status.parsingLog.push(`[${baseMethodName}] No invalid backslash escapes found/fixed.`);\n        }\n        parsing_status.finalAttemptedJsonString = currentAttemptText;\n        parseResult = tryParseJsonInternal(currentAttemptText);\n        if (parseResult.data) { processSuccess(parseResult.data, method, flags); return true; }\n        parsing_status.parsingLog.push(`[${baseMethodName}] Parse failed after invalid escape fix (if any): ${parseResult.error}`);\n        parsing_status.errors.push(`Parse (${method}): ${parseResult.error}`);\n\n\n        // 2. Fix trailing commas\n        parsing_status.parsingLog.push(`[${baseMethodName}] Applying trailing comma fix...`);\n        let fixedCommasText = fixTrailingCommas(currentAttemptText);\n        if (fixedCommasText !== currentAttemptText) {\n            parsing_status.parsingLog.push(`[${baseMethodName}] Trailing commas fixed.`);\n            flags.trailingCommaFixApplied = true;\n            currentAttemptText = fixedCommasText;\n            method = `${baseMethodName}${flags.controlCharFixApplied ? ' + Control Char Escape' : ''}${flags.invalidEscapeFixApplied ? ' + Invalid Escape Fix' : ''} + Trailing Comma Fix`;\n            parsing_status.finalAttemptedJsonString = currentAttemptText;\n            parseResult = tryParseJsonInternal(currentAttemptText);\n            if (parseResult.data) { processSuccess(parseResult.data, method, flags); return true; }\n            parsing_status.parsingLog.push(`[${baseMethodName}] Parse failed after comma fix: ${parseResult.error}`);\n            parsing_status.errors.push(`Parse (${method}): ${parseResult.error}`);\n        } else {\n            parsing_status.parsingLog.push(`[${baseMethodName}] No trailing commas found/fixed.`);\n        }\n\n        // 3. Fix quotes\n        parsing_status.parsingLog.push(`[${baseMethodName}] Applying quote fix...`);\n        try {\n            let fixedQuotesText = fixJsonStringQuotes(currentAttemptText);\n            if (fixedQuotesText !== currentAttemptText) {\n                parsing_status.parsingLog.push(`[${baseMethodName}] Quotes fixed.`);\n                flags.quoteFixApplied = true;\n                currentAttemptText = fixedQuotesText;\n                method = `${baseMethodName}${flags.controlCharFixApplied ? ' + Control Char Escape' : ''}${flags.invalidEscapeFixApplied ? ' + Invalid Escape Fix' : ''}${flags.trailingCommaFixApplied ? ' + Trailing Comma Fix' : ''} + Quote Fix`;\n                parsing_status.finalAttemptedJsonString = currentAttemptText;\n                parseResult = tryParseJsonInternal(currentAttemptText);\n                if (parseResult.data) { processSuccess(parseResult.data, method, flags); return true; }\n                parsing_status.parsingLog.push(`[${baseMethodName}] Parse failed after quote fix: ${parseResult.error}`);\n                parsing_status.errors.push(`Parse (${method}): ${parseResult.error}`);\n            } else {\n                parsing_status.parsingLog.push(`[${baseMethodName}] Quote fixing did not modify the text.`);\n            }\n        } catch (e) {\n            parsing_status.parsingLog.push(`[${baseMethodName}] Error during quote fixing attempt: ${e.message}`);\n            parsing_status.errors.push(`Parse (${method} - quote fix error): ${e.message}`);\n        }\n        \n        parsing_status.finalAttemptedJsonString = currentAttemptText;\n        return false;\n    }\n\n    parsing_status.parsingLog.push(\"Attempting parse/fix on entire cleaned text...\");\n    attemptParseAndFix(parsing_status.cleanedInput, \"Direct\");\n\n    if (!firstParsedData) {\n        parsing_status.parsingLog.push(\"Direct processing failed. Attempting structured extraction...\");\n        const candidates = extractPotentialJsonStrings(parsing_status.cleanedInput);\n        parsing_status.parsingLog.push(`Found ${candidates.length} potential JSON candidate(s) via balancing.`);\n\n        for (let i = 0; i < candidates.length && !firstParsedData; i++) {\n            const candidate = candidates[i];\n            parsing_status.parsingLog.push(`Attempting parse/fix on candidate ${i + 1}/${candidates.length}...`);\n            attemptParseAndFix(candidate, `Structured Candidate ${i + 1}`);\n        }\n    }\n\n    if (firstParsedData) {\n        parsing_status.parsingLog.push(`Successfully parsed JSON found using method: ${parsing_status.successfulMethod}.`);\n        if (typeof firstParsedData === 'object' && !Array.isArray(firstParsedData)) {\n             return { ...firstParsedData, parsing_status: parsing_status };\n        } else {\n             parsing_status.parsingLog.push(\"Parsed data is an array or non-object, returning under 'parsed_data' key.\");\n             return { parsed_data: firstParsedData, parsing_status: parsing_status };\n        }\n    } else {\n        parsing_status.parsingLog.push(\"No valid JSON object or array could be parsed from the input after all attempts.\");\n        parsing_status.success = false;\n        if (!parsing_status.finalAttemptedJsonString && parsing_status.cleanedInput) {\n             parsing_status.finalAttemptedJsonString = parsing_status.cleanedInput;\n        } else if (!parsing_status.finalAttemptedJsonString) {\n             parsing_status.finalAttemptedJsonString = text;\n        }\n        return { parsing_status: parsing_status };\n    }\n}\n\n// --- n8n Usage ---\n// const inputItem = $input.item.json; \nconst inputItem = $input.first().json.choices[0].message.content;\n// const inputText = inputItem && inputItem.text ? inputItem.text : null;\nconst parsingResult = findAndParseJsonRobustly(inputItem);\n\nreturn parsingResult;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1424,
+        -160
+      ],
+      "id": "be3993fc-5c4b-4285-970a-3838ebc39fa2",
+      "name": "Clean result-1"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Escapes control characters (like \\n, \\r, \\t) within JSON strings.\n * Ex: Replaces a literal newline in \"hello\\nworld\" with \"hello\\\\nworld\".\n * @param {string} jsonString The string potentially containing unescaped control characters.\n * @returns {string} The corrected string.\n */\nfunction escapeControlCharsInStrings(jsonString) {\n    let fixed = \"\";\n    let inString = false;\n    let escapeNext = false;\n\n    for (let i = 0; i < jsonString.length; i++) {\n        const char = jsonString[i];\n\n        if (escapeNext) {\n            fixed += char;\n            escapeNext = false;\n            continue;\n        }\n\n        if (char === '\\\\') {\n            fixed += '\\\\';\n            escapeNext = true;\n            continue;\n        }\n\n        if (char === '\"') {\n            fixed += '\"';\n            inString = !inString;\n            continue;\n        }\n\n        if (inString) {\n            if (char === '\\n') {\n                fixed += '\\\\n';\n            } else if (char === '\\r') {\n                fixed += '\\\\r';\n            } else if (char === '\\t') {\n                fixed += '\\\\t';\n            } else if (char === '\\b') {\n                fixed += '\\\\b';\n            } else if (char === '\\f') {\n                fixed += '\\\\f';\n            }\n            // Handle other control characters (U+0000 to U+001F)\n            // that do not have a short escape sequence.\n            else if (char.charCodeAt(0) >= 0 && char.charCodeAt(0) <= 31) {\n                let hex = char.charCodeAt(0).toString(16);\n                fixed += '\\\\u' + '0000'.substring(hex.length) + hex;\n            }\n            else {\n                fixed += char;\n            }\n        } else {\n            fixed += char;\n        }\n    }\n    return fixed;\n}\n\n\n/**\n * Fixes invalid escape sequences in a potential JSON string\n * by escaping the backslash itself.\n * Ex: Replaces `\\$` with `\\\\$`, `\\: ` with `\\\\:`, but leaves `\\\"` or `\\\\` or `\\n` (if already escaped) intact.\n * @param {string} jsonString The string potentially containing invalid escapes.\n * @returns {string} The corrected string.\n */\nfunction fixInvalidEscapes(jsonString) {\n    let fixed = \"\";\n    for (let i = 0; i < jsonString.length; i++) {\n        if (jsonString[i] === '\\\\') {\n            if (i + 1 < jsonString.length) {\n                const nextChar = jsonString[i + 1];\n                const validEscapeChars = ['\"', '\\\\', '/', 'b', 'f', 'n', 'r', 't'];\n\n                if (validEscapeChars.includes(nextChar)) {\n                    fixed += '\\\\' + nextChar;\n                    i++;\n                } else if (nextChar === 'u') {\n                    if (i + 5 < jsonString.length && /^[0-9a-fA-F]{4}$/.test(jsonString.substring(i + 2, i + 6))) {\n                        fixed += '\\\\u' + jsonString.substring(i + 2, i + 6);\n                        i += 5;\n                    } else {\n                        fixed += '\\\\\\\\u';\n                        i++;\n                    }\n                } else {\n                    fixed += '\\\\\\\\' + nextChar;\n                    i++;\n                }\n            } else {\n                fixed += '\\\\\\\\';\n            }\n        } else {\n            fixed += jsonString[i];\n        }\n    }\n    return fixed;\n}\n\n/**\n * Attempts to parse a JSON string. Returns the object/array or null on error.\n * Also captures the error message with context.\n * @param {string} jsonString The string to parse.\n * @returns {{ data: object | Array | null, error: string | null }} Parsing result.\n */\nfunction tryParseJsonInternal(jsonString) {\n    try {\n        const data = JSON.parse(jsonString);\n        if (typeof data === 'object' && data !== null) {\n            return { data: data, error: null };\n        } else {\n            return { data: null, error: \"Parsed data is not a JSON object or array.\" };\n        }\n    } catch (e) {\n        let errorMessage = e.message;\n        if (e.message.includes('position')) {\n             try {\n                 const positionMatch = e.message.match(/position\\s+(\\d+)/);\n                 if (positionMatch && positionMatch[1]) {\n                      const position = parseInt(positionMatch[1], 10);\n                      const contextChars = 20;\n                      const start = Math.max(0, position - contextChars);\n                      const end = Math.min(jsonString.length, position + contextChars);\n                      const context = jsonString.substring(start, end);\n                      errorMessage += ` (near: ...${context}...)`;\n                 }\n             } catch (contextError) { /* Ignore error during context generation */ }\n        }\n        return { data: null, error: errorMessage };\n    }\n}\n\n\n/**\n * Attempts to fix unescaped double quotes within JSON strings.\n * @param {string} jsonString The potentially malformed JSON string.\n * @returns {string} The JSON string with an attempted quote fix.\n */\nfunction fixJsonStringQuotes(jsonString) {\n    let fixed = \"\";\n    let inString = false;\n    let escapeNext = false;\n\n    for (let i = 0; i < jsonString.length; i++) {\n        const char = jsonString[i];\n\n        if (escapeNext) { fixed += char; escapeNext = false; continue; }\n        if (char === '\\\\') { fixed += '\\\\'; escapeNext = true; continue; }\n        if (char === '\"') {\n            if (inString) {\n                let nextMeaningfulChar = null;\n                for (let j = i + 1; j < jsonString.length; j++) {\n                    if (!/\\s/.test(jsonString[j])) { nextMeaningfulChar = jsonString[j]; break; }\n                }\n                if (nextMeaningfulChar === null || [':', ',', '}', ']'].includes(nextMeaningfulChar)) {\n                    fixed += '\"'; inString = false;\n                } else { fixed += '\\\\\"'; } // Escape internal quote\n            } else { fixed += '\"'; inString = true; }\n        } else { fixed += char; }\n    }\n    return fixed;\n}\n\n\n/**\n * Extracts potential JSON objects or arrays based on balancing { } and [ ] characters.\n * @param {string} text The source text.\n * @returns {string[]} An array of potentially JSON strings.\n */\nfunction extractPotentialJsonStrings(text) {\n    const results = [];\n    let braceDepth = 0, bracketDepth = 0, startIndex = -1, inString = false, escapeNext = false;\n    for (let i = 0; i < text.length; i++) {\n        const char = text[i];\n        if (escapeNext) { escapeNext = false; continue; }\n        if (char === '\\\\') { escapeNext = true; continue; }\n        if (char === '\"') { inString = !inString; }\n        if (!inString) {\n            if (char === '{') { if (braceDepth === 0 && bracketDepth === 0) startIndex = i; braceDepth++; }\n            else if (char === '}') { if (braceDepth > 0) { braceDepth--; if (braceDepth === 0 && bracketDepth === 0 && startIndex !== -1) { results.push(text.substring(startIndex, i + 1)); startIndex = -1; } } }\n            else if (char === '[') { if (braceDepth === 0 && bracketDepth === 0) startIndex = i; bracketDepth++; }\n            else if (char === ']') { if (bracketDepth > 0) { bracketDepth--; if (braceDepth === 0 && bracketDepth === 0 && startIndex !== -1) { results.push(text.substring(startIndex, i + 1)); startIndex = -1; } } }\n        }\n    }\n    return results;\n}\n\n/**\n * Attempts to fix trailing commas.\n * @param {string} jsonString JSON string potentially with trailing commas.\n * @returns {string} Corrected string.\n */\nfunction fixTrailingCommas(jsonString) {\n    try { return jsonString.replace(/,\\s*([}\\]])/g, '$1'); }\n    catch(e) { return jsonString; }\n}\n\n/**\n * Main function to find and parse the first valid JSON object/array in a text,\n * with pre-cleaning and multiple correction attempts.\n * Merges the keys of the found JSON with parsing metadata.\n *\n * @param {string} text The text potentially containing JSON.\n * @returns {object} An object containing the keys of the parsed JSON (if object)\n *                   or a 'parsed_data' key (if array), and a 'parsing_status' object.\n */\nfunction findAndParseJsonRobustly(text) {\n    let firstParsedData = null;\n    const parsing_status = {\n        success: false,\n        successfulMethod: null,\n        controlCharFixApplied: false, // New flag\n        invalidEscapeFixApplied: false,\n        trailingCommaFixApplied: false,\n        quoteFixApplied: false,\n        parsingLog: [],\n        errors: [],\n        originalInput: text,\n        cleanedInput: null,\n        finalAttemptedJsonString: null\n    };\n\n    if (!text || typeof text !== 'string') {\n        parsing_status.errors.push(\"Input text is null or not a string.\");\n        parsing_status.parsingLog.push(\"Validation failed: Input is not a valid string.\");\n        return { parsing_status };\n    }\n\n    parsing_status.parsingLog.push(\"Starting robust JSON parsing.\");\n\n    let currentText = text.trim();\n    parsing_status.parsingLog.push(`Original length: ${text.length}, Trimmed length: ${currentText.length}`);\n    const markdownBlockRegex = /^```(?:json)?\\s*([\\s\\S]*?)\\s*```$/;\n    const match = currentText.match(markdownBlockRegex);\n    if (match && match[1]) {\n        currentText = match[1].trim();\n        parsing_status.parsingLog.push(\"Detected and removed Markdown code block fences.\");\n    } else {\n        parsing_status.parsingLog.push(\"No Markdown code block fences detected.\");\n    }\n    parsing_status.cleanedInput = currentText;\n    parsing_status.parsingLog.push(`Cleaned text length after potential fence removal: ${currentText.length}`);\n\n    function processSuccess(data, method, flags) {\n        parsing_status.parsingLog.push(`Success with method: ${method}`);\n        parsing_status.success = true;\n        parsing_status.successfulMethod = method;\n        parsing_status.controlCharFixApplied = flags.controlCharFixApplied || false;\n        parsing_status.invalidEscapeFixApplied = flags.invalidEscapeFixApplied || false;\n        parsing_status.trailingCommaFixApplied = flags.trailingCommaFixApplied || false;\n        parsing_status.quoteFixApplied = flags.quoteFixApplied || false;\n        firstParsedData = data;\n    }\n\n    function attemptParseAndFix(textToParse, baseMethodName) {\n        let currentAttemptText = textToParse;\n        let flags = { controlCharFixApplied: false, invalidEscapeFixApplied: false, trailingCommaFixApplied: false, quoteFixApplied: false };\n        let method = baseMethodName;\n        let parseResult;\n\n        // 0. Escape control characters WITHIN strings (BEFORE fixInvalidEscapes)\n        parsing_status.parsingLog.push(`[${baseMethodName}] Applying control character escaping in strings...`);\n        let fixedControlCharsText = escapeControlCharsInStrings(currentAttemptText);\n        if (fixedControlCharsText !== currentAttemptText) {\n            parsing_status.parsingLog.push(`[${baseMethodName}] Control characters in strings escaped.`);\n            flags.controlCharFixApplied = true;\n            currentAttemptText = fixedControlCharsText;\n            method = `${baseMethodName} + Control Char Escape`;\n        } else {\n            parsing_status.parsingLog.push(`[${baseMethodName}] No control characters in strings needed escaping or found.`);\n        }\n        parsing_status.finalAttemptedJsonString = currentAttemptText;\n        parseResult = tryParseJsonInternal(currentAttemptText);\n        if (parseResult.data) { processSuccess(parseResult.data, method, flags); return true; }\n        parsing_status.parsingLog.push(`[${baseMethodName}] Parse failed after control char escape (if any): ${parseResult.error}`);\n        parsing_status.errors.push(`Parse (${method}): ${parseResult.error}`);\n\n\n        // 1. Fix invalid escapes (backslash)\n        parsing_status.parsingLog.push(`[${baseMethodName}] Applying invalid escape fix (escaping backslash)...`);\n        let fixedEscapesText = fixInvalidEscapes(currentAttemptText);\n        if (fixedEscapesText !== currentAttemptText) {\n            parsing_status.parsingLog.push(`[${baseMethodName}] Invalid backslash escapes fixed.`);\n            flags.invalidEscapeFixApplied = true;\n            currentAttemptText = fixedEscapesText;\n            method = `${baseMethodName}${flags.controlCharFixApplied ? ' + Control Char Escape' : ''} + Invalid Escape Fix`;\n        } else {\n            parsing_status.parsingLog.push(`[${baseMethodName}] No invalid backslash escapes found/fixed.`);\n        }\n        parsing_status.finalAttemptedJsonString = currentAttemptText;\n        parseResult = tryParseJsonInternal(currentAttemptText);\n        if (parseResult.data) { processSuccess(parseResult.data, method, flags); return true; }\n        parsing_status.parsingLog.push(`[${baseMethodName}] Parse failed after invalid escape fix (if any): ${parseResult.error}`);\n        parsing_status.errors.push(`Parse (${method}): ${parseResult.error}`);\n\n\n        // 2. Fix trailing commas\n        parsing_status.parsingLog.push(`[${baseMethodName}] Applying trailing comma fix...`);\n        let fixedCommasText = fixTrailingCommas(currentAttemptText);\n        if (fixedCommasText !== currentAttemptText) {\n            parsing_status.parsingLog.push(`[${baseMethodName}] Trailing commas fixed.`);\n            flags.trailingCommaFixApplied = true;\n            currentAttemptText = fixedCommasText;\n            method = `${baseMethodName}${flags.controlCharFixApplied ? ' + Control Char Escape' : ''}${flags.invalidEscapeFixApplied ? ' + Invalid Escape Fix' : ''} + Trailing Comma Fix`;\n            parsing_status.finalAttemptedJsonString = currentAttemptText;\n            parseResult = tryParseJsonInternal(currentAttemptText);\n            if (parseResult.data) { processSuccess(parseResult.data, method, flags); return true; }\n            parsing_status.parsingLog.push(`[${baseMethodName}] Parse failed after comma fix: ${parseResult.error}`);\n            parsing_status.errors.push(`Parse (${method}): ${parseResult.error}`);\n        } else {\n            parsing_status.parsingLog.push(`[${baseMethodName}] No trailing commas found/fixed.`);\n        }\n\n        // 3. Fix quotes\n        parsing_status.parsingLog.push(`[${baseMethodName}] Applying quote fix...`);\n        try {\n            let fixedQuotesText = fixJsonStringQuotes(currentAttemptText);\n            if (fixedQuotesText !== currentAttemptText) {\n                parsing_status.parsingLog.push(`[${baseMethodName}] Quotes fixed.`);\n                flags.quoteFixApplied = true;\n                currentAttemptText = fixedQuotesText;\n                method = `${baseMethodName}${flags.controlCharFixApplied ? ' + Control Char Escape' : ''}${flags.invalidEscapeFixApplied ? ' + Invalid Escape Fix' : ''}${flags.trailingCommaFixApplied ? ' + Trailing Comma Fix' : ''} + Quote Fix`;\n                parsing_status.finalAttemptedJsonString = currentAttemptText;\n                parseResult = tryParseJsonInternal(currentAttemptText);\n                if (parseResult.data) { processSuccess(parseResult.data, method, flags); return true; }\n                parsing_status.parsingLog.push(`[${baseMethodName}] Parse failed after quote fix: ${parseResult.error}`);\n                parsing_status.errors.push(`Parse (${method}): ${parseResult.error}`);\n            } else {\n                parsing_status.parsingLog.push(`[${baseMethodName}] Quote fixing did not modify the text.`);\n            }\n        } catch (e) {\n            parsing_status.parsingLog.push(`[${baseMethodName}] Error during quote fixing attempt: ${e.message}`);\n            parsing_status.errors.push(`Parse (${method} - quote fix error): ${e.message}`);\n        }\n        \n        parsing_status.finalAttemptedJsonString = currentAttemptText;\n        return false;\n    }\n\n    parsing_status.parsingLog.push(\"Attempting parse/fix on entire cleaned text...\");\n    attemptParseAndFix(parsing_status.cleanedInput, \"Direct\");\n\n    if (!firstParsedData) {\n        parsing_status.parsingLog.push(\"Direct processing failed. Attempting structured extraction...\");\n        const candidates = extractPotentialJsonStrings(parsing_status.cleanedInput);\n        parsing_status.parsingLog.push(`Found ${candidates.length} potential JSON candidate(s) via balancing.`);\n\n        for (let i = 0; i < candidates.length && !firstParsedData; i++) {\n            const candidate = candidates[i];\n            parsing_status.parsingLog.push(`Attempting parse/fix on candidate ${i + 1}/${candidates.length}...`);\n            attemptParseAndFix(candidate, `Structured Candidate ${i + 1}`);\n        }\n    }\n\n    if (firstParsedData) {\n        parsing_status.parsingLog.push(`Successfully parsed JSON found using method: ${parsing_status.successfulMethod}.`);\n        if (typeof firstParsedData === 'object' && !Array.isArray(firstParsedData)) {\n             return { ...firstParsedData, parsing_status: parsing_status };\n        } else {\n             parsing_status.parsingLog.push(\"Parsed data is an array or non-object, returning under 'parsed_data' key.\");\n             return { parsed_data: firstParsedData, parsing_status: parsing_status };\n        }\n    } else {\n        parsing_status.parsingLog.push(\"No valid JSON object or array could be parsed from the input after all attempts.\");\n        parsing_status.success = false;\n        if (!parsing_status.finalAttemptedJsonString && parsing_status.cleanedInput) {\n             parsing_status.finalAttemptedJsonString = parsing_status.cleanedInput;\n        } else if (!parsing_status.finalAttemptedJsonString) {\n             parsing_status.finalAttemptedJsonString = text;\n        }\n        return { parsing_status: parsing_status };\n    }\n}\n\n// --- n8n Usage ---\n// const inputItem = $input.item.json; \nconst inputItem = $input.first().json.choices[0].message.content;\n// const inputText = inputItem && inputItem.text ? inputItem.text : null;\nconst parsingResult = findAndParseJsonRobustly(inputItem);\n\nreturn parsingResult;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1424,
+        112
+      ],
+      "id": "fda55bc1-e3f6-4aca-aad9-1fb93cb9c471",
+      "name": "Clean result-2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_CREDENTIALS }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $env.AI_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.AI_MODEL }}\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt3 || 'ERROR: No se encontró el prompt.' }}\" \n    }\n  ],\n  \"max_tokens\": 4096,\n  \"temperature\": 0.5\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        400
+      ],
+      "id": "6ccc0b2c-2bc6-4767-afa0-58da5f4c2ad2",
+      "name": "HTTP Request-3"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n//const inputData = JSON.parse($input.first().json.message.text);\n\n// When run it with Telegram\n// const inputData = $('Telegram Trigger').first().json.message.text;\n\n// When run with Webhook\nconst inputData =  $('Webhook').first().json.body.texto\nconsole.log(inputData)\n\n\nconst prompt1 = $input.first().json.identify_location_prompt\n\nconst prompt1Text = `${prompt1}, Execute the previous steps with the next data  ${inputData}. Just answer with the result in a clean JSON format, starting with, without any markdown notation`;\n\nreturn [\n  {\n    json: {\n      prompt: prompt1Text,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        -160
+      ],
+      "id": "e993a262-7354-4c30-bd62-0acd9ce198b9",
+      "name": "Concatenate Prompt-1"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst clearedIdentifiedData1 = $('Clean result-1').first().json.parsed_data\n\n// 2. Acceder al prompt base de deduplicación que viene del inicio del workflow.\nconst prompt2 = $input.first().json['location_&_context_prompt']\n\n// 3. Serializar el objeto JSON a una cadena de texto.\n// Esto convierte: [{...}, {...}] a '[{\"...\"}, {\"...\"}]'\nconst serializedData = JSON.stringify(clearedIdentifiedData1);\n\n\n// 4. Combinar el prompt base con los datos serializados.\n// Esto asegura que la IA reciba una cadena de texto válida, no \"[object Object]\".\nconst prompt2Text = `${prompt2} Execute the previous steps with the next data: ${serializedData}. Just answer with the result in a clean JSON format, starting with, without any markdown notation`;\n\n// 5. Devolver la nueva variable 'prompt' para el siguiente HTTP Request.\nreturn [\n  {\n    json: {\n      prompt: prompt2Text,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        112
+      ],
+      "id": "7198c7e6-37ce-46a8-9e0a-d1253f3bdaf4",
+      "name": "Concatenate Prompt-2"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n//const inputData = JSON.parse($input.first().json.message.text);\n\n// When run it with Telegram\n//const inputData = $('Telegram Trigger').first().json.message.text;\n\n//const identifiedData2 = $('HTTP Request-2').first().json.choices[0].message.content\n\n// const clearedIdentifiedData2 = $('Clean result-2').first().json.clean_output\n\n// const prompt3 = $input.first().json.deduplication_prompt\n\n// const prompt3Text = `${prompt3} Execute the previous steps with the next data: ${clearedIdentifiedData2}`;\n\n// return [\n//   {\n//     json: {\n//       prompt: prompt3Text,\n//     },\n//   },\n// ];\n\n// 1. Acceder al objeto JSON limpio del nodo anterior (Ej: 'Clean result-2').\n// ASUMIMOS que el nodo 'Clean result-2' devuelve un objeto en .json.clean_output.\nconst clearedIdentifiedData2 = $('Clean result-2').first().json.parsed_data\n// 2. Acceder al prompt base de deduplicación que viene del inicio del workflow.\nconst prompt3 = $input.first().json.deduplication_prompt;\n\n// 3. Serializar el objeto JSON a una cadena de texto.\n// Esto convierte: [{...}, {...}] a '[{\"...\"}, {\"...\"}]'\nconst serializedData = JSON.stringify(clearedIdentifiedData2);\n\n// 4. Combinar el prompt base con los datos serializados.\n// Esto asegura que la IA reciba una cadena de texto válida, no \"[object Object]\".\nconst prompt3Text = `${prompt3} Execute the previous steps with the next data: ${serializedData}. Just answer with the result in a clean JSON format, starting with, without any markdown notation`;\n\n// 5. Devolver la nueva variable 'prompt' para el siguiente HTTP Request.\nreturn [\n  {\n    json: {\n      prompt: prompt3Text,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        400
+      ],
+      "id": "74b41fd8-b8ea-4419-9bbd-86af02c5c901",
+      "name": "Concatenate Prompt-3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Variable prompt from last Node\nconst promptText = $input.first().json.prompt\n\n// 1. Replace all doble quotes with (\\\") so it can be read\n// 2. Replace any jump line with \\n\nconst cleanedPrompt = promptText\n    .replace(/\"/g, '\\\\\"')\n    .replace(/\\n/g, '\\\\n');\n// const cleanedPrompt = promptText.replace(/\\\\n(?:=[^“]*”(?:[^“]*”[^“]*”)*[^\\\"]*$)/g, '\\\\n');\nreturn [\n  {\n    \"prompt1\": cleanedPrompt\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -160
+      ],
+      "id": "8d1a9f03-270f-4311-b649-681926d17017",
+      "name": "Format Cleaner-1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Variable prompt from last Node\nconst promptText = $input.first().json.prompt\n\n// 1. Replace all doble quotes with (\\\") so it can be read\n// 2. Replace any jump line with \\n\nconst cleanedPrompt = promptText\n    .replace(/\"/g, '\\\\\"')\n    .replace(/\\n/g, '\\\\n');\n\nreturn [\n  {\n    \"prompt2\": cleanedPrompt\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        112
+      ],
+      "id": "7ff52cfc-ad04-4206-8a07-86f9dd0e44b3",
+      "name": "Format Cleaner-2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Variable prompt from last Node\nconst promptText = $input.first().json.prompt\n\n// 1. Replace all doble quotes with (\\\") so it can be read\n// 2. Replace any jump line with \\n\nconst cleanedPrompt = promptText\n    .replace(/\"/g, '\\\\\"')\n    .replace(/\\n/g, '\\\\n');\n\nreturn [\n  {\n    prompt3: cleanedPrompt\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        400
+      ],
+      "id": "37a7a1dc-1c3c-48a4-ab9b-e7edee1bfc20",
+      "name": "Format Cleaner-3"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "7cabd6f2-518e-4407-b1a6-546717dad384",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        544,
+        -432
+      ],
+      "id": "ca985c8c-c37e-42c9-976c-c96d0925dbc5",
+      "name": "Webhook",
+      "webhookId": "7cabd6f2-518e-4407-b1a6-546717dad384"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"Locations\": {{ JSON.stringify($json.parsed_data, null, 2) }}\n}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1632,
+        400
+      ],
+      "id": "f1d4f829-cdb3-408d-827a-746a5fd9696d",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Escapes control characters (like \\n, \\r, \\t) within JSON strings.\n * Ex: Replaces a literal newline in \"hello\\nworld\" with \"hello\\\\nworld\".\n * @param {string} jsonString The string potentially containing unescaped control characters.\n * @returns {string} The corrected string.\n */\nfunction escapeControlCharsInStrings(jsonString) {\n    let fixed = \"\";\n    let inString = false;\n    let escapeNext = false;\n\n    for (let i = 0; i < jsonString.length; i++) {\n        const char = jsonString[i];\n\n        if (escapeNext) {\n            fixed += char;\n            escapeNext = false;\n            continue;\n        }\n\n        if (char === '\\\\') {\n            fixed += '\\\\';\n            escapeNext = true;\n            continue;\n        }\n\n        if (char === '\"') {\n            fixed += '\"';\n            inString = !inString;\n            continue;\n        }\n\n        if (inString) {\n            if (char === '\\n') {\n                fixed += '\\\\n';\n            } else if (char === '\\r') {\n                fixed += '\\\\r';\n            } else if (char === '\\t') {\n                fixed += '\\\\t';\n            } else if (char === '\\b') {\n                fixed += '\\\\b';\n            } else if (char === '\\f') {\n                fixed += '\\\\f';\n            }\n            // Handle other control characters (U+0000 to U+001F)\n            // that do not have a short escape sequence.\n            else if (char.charCodeAt(0) >= 0 && char.charCodeAt(0) <= 31) {\n                let hex = char.charCodeAt(0).toString(16);\n                fixed += '\\\\u' + '0000'.substring(hex.length) + hex;\n            }\n            else {\n                fixed += char;\n            }\n        } else {\n            fixed += char;\n        }\n    }\n    return fixed;\n}\n\n\n/**\n * Fixes invalid escape sequences in a potential JSON string\n * by escaping the backslash itself.\n * Ex: Replaces `\\$` with `\\\\$`, `\\: ` with `\\\\:`, but leaves `\\\"` or `\\\\` or `\\n` (if already escaped) intact.\n * @param {string} jsonString The string potentially containing invalid escapes.\n * @returns {string} The corrected string.\n */\nfunction fixInvalidEscapes(jsonString) {\n    let fixed = \"\";\n    for (let i = 0; i < jsonString.length; i++) {\n        if (jsonString[i] === '\\\\') {\n            if (i + 1 < jsonString.length) {\n                const nextChar = jsonString[i + 1];\n                const validEscapeChars = ['\"', '\\\\', '/', 'b', 'f', 'n', 'r', 't'];\n\n                if (validEscapeChars.includes(nextChar)) {\n                    fixed += '\\\\' + nextChar;\n                    i++;\n                } else if (nextChar === 'u') {\n                    if (i + 5 < jsonString.length && /^[0-9a-fA-F]{4}$/.test(jsonString.substring(i + 2, i + 6))) {\n                        fixed += '\\\\u' + jsonString.substring(i + 2, i + 6);\n                        i += 5;\n                    } else {\n                        fixed += '\\\\\\\\u';\n                        i++;\n                    }\n                } else {\n                    fixed += '\\\\\\\\' + nextChar;\n                    i++;\n                }\n            } else {\n                fixed += '\\\\\\\\';\n            }\n        } else {\n            fixed += jsonString[i];\n        }\n    }\n    return fixed;\n}\n\n/**\n * Attempts to parse a JSON string. Returns the object/array or null on error.\n * Also captures the error message with context.\n * @param {string} jsonString The string to parse.\n * @returns {{ data: object | Array | null, error: string | null }} Parsing result.\n */\nfunction tryParseJsonInternal(jsonString) {\n    try {\n        const data = JSON.parse(jsonString);\n        if (typeof data === 'object' && data !== null) {\n            return { data: data, error: null };\n        } else {\n            return { data: null, error: \"Parsed data is not a JSON object or array.\" };\n        }\n    } catch (e) {\n        let errorMessage = e.message;\n        if (e.message.includes('position')) {\n             try {\n                 const positionMatch = e.message.match(/position\\s+(\\d+)/);\n                 if (positionMatch && positionMatch[1]) {\n                      const position = parseInt(positionMatch[1], 10);\n                      const contextChars = 20;\n                      const start = Math.max(0, position - contextChars);\n                      const end = Math.min(jsonString.length, position + contextChars);\n                      const context = jsonString.substring(start, end);\n                      errorMessage += ` (near: ...${context}...)`;\n                 }\n             } catch (contextError) { /* Ignore error during context generation */ }\n        }\n        return { data: null, error: errorMessage };\n    }\n}\n\n\n/**\n * Attempts to fix unescaped double quotes within JSON strings.\n * @param {string} jsonString The potentially malformed JSON string.\n * @returns {string} The JSON string with an attempted quote fix.\n */\nfunction fixJsonStringQuotes(jsonString) {\n    let fixed = \"\";\n    let inString = false;\n    let escapeNext = false;\n\n    for (let i = 0; i < jsonString.length; i++) {\n        const char = jsonString[i];\n\n        if (escapeNext) { fixed += char; escapeNext = false; continue; }\n        if (char === '\\\\') { fixed += '\\\\'; escapeNext = true; continue; }\n        if (char === '\"') {\n            if (inString) {\n                let nextMeaningfulChar = null;\n                for (let j = i + 1; j < jsonString.length; j++) {\n                    if (!/\\s/.test(jsonString[j])) { nextMeaningfulChar = jsonString[j]; break; }\n                }\n                if (nextMeaningfulChar === null || [':', ',', '}', ']'].includes(nextMeaningfulChar)) {\n                    fixed += '\"'; inString = false;\n                } else { fixed += '\\\\\"'; } // Escape internal quote\n            } else { fixed += '\"'; inString = true; }\n        } else { fixed += char; }\n    }\n    return fixed;\n}\n\n\n/**\n * Extracts potential JSON objects or arrays based on balancing { } and [ ] characters.\n * @param {string} text The source text.\n * @returns {string[]} An array of potentially JSON strings.\n */\nfunction extractPotentialJsonStrings(text) {\n    const results = [];\n    let braceDepth = 0, bracketDepth = 0, startIndex = -1, inString = false, escapeNext = false;\n    for (let i = 0; i < text.length; i++) {\n        const char = text[i];\n        if (escapeNext) { escapeNext = false; continue; }\n        if (char === '\\\\') { escapeNext = true; continue; }\n        if (char === '\"') { inString = !inString; }\n        if (!inString) {\n            if (char === '{') { if (braceDepth === 0 && bracketDepth === 0) startIndex = i; braceDepth++; }\n            else if (char === '}') { if (braceDepth > 0) { braceDepth--; if (braceDepth === 0 && bracketDepth === 0 && startIndex !== -1) { results.push(text.substring(startIndex, i + 1)); startIndex = -1; } } }\n            else if (char === '[') { if (braceDepth === 0 && bracketDepth === 0) startIndex = i; bracketDepth++; }\n            else if (char === ']') { if (bracketDepth > 0) { bracketDepth--; if (braceDepth === 0 && bracketDepth === 0 && startIndex !== -1) { results.push(text.substring(startIndex, i + 1)); startIndex = -1; } } }\n        }\n    }\n    return results;\n}\n\n/**\n * Attempts to fix trailing commas.\n * @param {string} jsonString JSON string potentially with trailing commas.\n * @returns {string} Corrected string.\n */\nfunction fixTrailingCommas(jsonString) {\n    try { return jsonString.replace(/,\\s*([}\\]])/g, '$1'); }\n    catch(e) { return jsonString; }\n}\n\n/**\n * Main function to find and parse the first valid JSON object/array in a text,\n * with pre-cleaning and multiple correction attempts.\n * Merges the keys of the found JSON with parsing metadata.\n *\n * @param {string} text The text potentially containing JSON.\n * @returns {object} An object containing the keys of the parsed JSON (if object)\n *                   or a 'parsed_data' key (if array), and a 'parsing_status' object.\n */\nfunction findAndParseJsonRobustly(text) {\n    let firstParsedData = null;\n    const parsing_status = {\n        success: false,\n        successfulMethod: null,\n        controlCharFixApplied: false, // New flag\n        invalidEscapeFixApplied: false,\n        trailingCommaFixApplied: false,\n        quoteFixApplied: false,\n        parsingLog: [],\n        errors: [],\n        originalInput: text,\n        cleanedInput: null,\n        finalAttemptedJsonString: null\n    };\n\n    if (!text || typeof text !== 'string') {\n        parsing_status.errors.push(\"Input text is null or not a string.\");\n        parsing_status.parsingLog.push(\"Validation failed: Input is not a valid string.\");\n        return { parsing_status };\n    }\n\n    parsing_status.parsingLog.push(\"Starting robust JSON parsing.\");\n\n    let currentText = text.trim();\n    parsing_status.parsingLog.push(`Original length: ${text.length}, Trimmed length: ${currentText.length}`);\n    const markdownBlockRegex = /^```(?:json)?\\s*([\\s\\S]*?)\\s*```$/;\n    const match = currentText.match(markdownBlockRegex);\n    if (match && match[1]) {\n        currentText = match[1].trim();\n        parsing_status.parsingLog.push(\"Detected and removed Markdown code block fences.\");\n    } else {\n        parsing_status.parsingLog.push(\"No Markdown code block fences detected.\");\n    }\n    parsing_status.cleanedInput = currentText;\n    parsing_status.parsingLog.push(`Cleaned text length after potential fence removal: ${currentText.length}`);\n\n    function processSuccess(data, method, flags) {\n        parsing_status.parsingLog.push(`Success with method: ${method}`);\n        parsing_status.success = true;\n        parsing_status.successfulMethod = method;\n        parsing_status.controlCharFixApplied = flags.controlCharFixApplied || false;\n        parsing_status.invalidEscapeFixApplied = flags.invalidEscapeFixApplied || false;\n        parsing_status.trailingCommaFixApplied = flags.trailingCommaFixApplied || false;\n        parsing_status.quoteFixApplied = flags.quoteFixApplied || false;\n        firstParsedData = data;\n    }\n\n    function attemptParseAndFix(textToParse, baseMethodName) {\n        let currentAttemptText = textToParse;\n        let flags = { controlCharFixApplied: false, invalidEscapeFixApplied: false, trailingCommaFixApplied: false, quoteFixApplied: false };\n        let method = baseMethodName;\n        let parseResult;\n\n        // 0. Escape control characters WITHIN strings (BEFORE fixInvalidEscapes)\n        parsing_status.parsingLog.push(`[${baseMethodName}] Applying control character escaping in strings...`);\n        let fixedControlCharsText = escapeControlCharsInStrings(currentAttemptText);\n        if (fixedControlCharsText !== currentAttemptText) {\n            parsing_status.parsingLog.push(`[${baseMethodName}] Control characters in strings escaped.`);\n            flags.controlCharFixApplied = true;\n            currentAttemptText = fixedControlCharsText;\n            method = `${baseMethodName} + Control Char Escape`;\n        } else {\n            parsing_status.parsingLog.push(`[${baseMethodName}] No control characters in strings needed escaping or found.`);\n        }\n        parsing_status.finalAttemptedJsonString = currentAttemptText;\n        parseResult = tryParseJsonInternal(currentAttemptText);\n        if (parseResult.data) { processSuccess(parseResult.data, method, flags); return true; }\n        parsing_status.parsingLog.push(`[${baseMethodName}] Parse failed after control char escape (if any): ${parseResult.error}`);\n        parsing_status.errors.push(`Parse (${method}): ${parseResult.error}`);\n\n\n        // 1. Fix invalid escapes (backslash)\n        parsing_status.parsingLog.push(`[${baseMethodName}] Applying invalid escape fix (escaping backslash)...`);\n        let fixedEscapesText = fixInvalidEscapes(currentAttemptText);\n        if (fixedEscapesText !== currentAttemptText) {\n            parsing_status.parsingLog.push(`[${baseMethodName}] Invalid backslash escapes fixed.`);\n            flags.invalidEscapeFixApplied = true;\n            currentAttemptText = fixedEscapesText;\n            method = `${baseMethodName}${flags.controlCharFixApplied ? ' + Control Char Escape' : ''} + Invalid Escape Fix`;\n        } else {\n            parsing_status.parsingLog.push(`[${baseMethodName}] No invalid backslash escapes found/fixed.`);\n        }\n        parsing_status.finalAttemptedJsonString = currentAttemptText;\n        parseResult = tryParseJsonInternal(currentAttemptText);\n        if (parseResult.data) { processSuccess(parseResult.data, method, flags); return true; }\n        parsing_status.parsingLog.push(`[${baseMethodName}] Parse failed after invalid escape fix (if any): ${parseResult.error}`);\n        parsing_status.errors.push(`Parse (${method}): ${parseResult.error}`);\n\n\n        // 2. Fix trailing commas\n        parsing_status.parsingLog.push(`[${baseMethodName}] Applying trailing comma fix...`);\n        let fixedCommasText = fixTrailingCommas(currentAttemptText);\n        if (fixedCommasText !== currentAttemptText) {\n            parsing_status.parsingLog.push(`[${baseMethodName}] Trailing commas fixed.`);\n            flags.trailingCommaFixApplied = true;\n            currentAttemptText = fixedCommasText;\n            method = `${baseMethodName}${flags.controlCharFixApplied ? ' + Control Char Escape' : ''}${flags.invalidEscapeFixApplied ? ' + Invalid Escape Fix' : ''} + Trailing Comma Fix`;\n            parsing_status.finalAttemptedJsonString = currentAttemptText;\n            parseResult = tryParseJsonInternal(currentAttemptText);\n            if (parseResult.data) { processSuccess(parseResult.data, method, flags); return true; }\n            parsing_status.parsingLog.push(`[${baseMethodName}] Parse failed after comma fix: ${parseResult.error}`);\n            parsing_status.errors.push(`Parse (${method}): ${parseResult.error}`);\n        } else {\n            parsing_status.parsingLog.push(`[${baseMethodName}] No trailing commas found/fixed.`);\n        }\n\n        // 3. Fix quotes\n        parsing_status.parsingLog.push(`[${baseMethodName}] Applying quote fix...`);\n        try {\n            let fixedQuotesText = fixJsonStringQuotes(currentAttemptText);\n            if (fixedQuotesText !== currentAttemptText) {\n                parsing_status.parsingLog.push(`[${baseMethodName}] Quotes fixed.`);\n                flags.quoteFixApplied = true;\n                currentAttemptText = fixedQuotesText;\n                method = `${baseMethodName}${flags.controlCharFixApplied ? ' + Control Char Escape' : ''}${flags.invalidEscapeFixApplied ? ' + Invalid Escape Fix' : ''}${flags.trailingCommaFixApplied ? ' + Trailing Comma Fix' : ''} + Quote Fix`;\n                parsing_status.finalAttemptedJsonString = currentAttemptText;\n                parseResult = tryParseJsonInternal(currentAttemptText);\n                if (parseResult.data) { processSuccess(parseResult.data, method, flags); return true; }\n                parsing_status.parsingLog.push(`[${baseMethodName}] Parse failed after quote fix: ${parseResult.error}`);\n                parsing_status.errors.push(`Parse (${method}): ${parseResult.error}`);\n            } else {\n                parsing_status.parsingLog.push(`[${baseMethodName}] Quote fixing did not modify the text.`);\n            }\n        } catch (e) {\n            parsing_status.parsingLog.push(`[${baseMethodName}] Error during quote fixing attempt: ${e.message}`);\n            parsing_status.errors.push(`Parse (${method} - quote fix error): ${e.message}`);\n        }\n        \n        parsing_status.finalAttemptedJsonString = currentAttemptText;\n        return false;\n    }\n\n    parsing_status.parsingLog.push(\"Attempting parse/fix on entire cleaned text...\");\n    attemptParseAndFix(parsing_status.cleanedInput, \"Direct\");\n\n    if (!firstParsedData) {\n        parsing_status.parsingLog.push(\"Direct processing failed. Attempting structured extraction...\");\n        const candidates = extractPotentialJsonStrings(parsing_status.cleanedInput);\n        parsing_status.parsingLog.push(`Found ${candidates.length} potential JSON candidate(s) via balancing.`);\n\n        for (let i = 0; i < candidates.length && !firstParsedData; i++) {\n            const candidate = candidates[i];\n            parsing_status.parsingLog.push(`Attempting parse/fix on candidate ${i + 1}/${candidates.length}...`);\n            attemptParseAndFix(candidate, `Structured Candidate ${i + 1}`);\n        }\n    }\n\n    if (firstParsedData) {\n        parsing_status.parsingLog.push(`Successfully parsed JSON found using method: ${parsing_status.successfulMethod}.`);\n        if (typeof firstParsedData === 'object' && !Array.isArray(firstParsedData)) {\n             return { ...firstParsedData, parsing_status: parsing_status };\n        } else {\n             parsing_status.parsingLog.push(\"Parsed data is an array or non-object, returning under 'parsed_data' key.\");\n             return { parsed_data: firstParsedData, parsing_status: parsing_status };\n        }\n    } else {\n        parsing_status.parsingLog.push(\"No valid JSON object or array could be parsed from the input after all attempts.\");\n        parsing_status.success = false;\n        if (!parsing_status.finalAttemptedJsonString && parsing_status.cleanedInput) {\n             parsing_status.finalAttemptedJsonString = parsing_status.cleanedInput;\n        } else if (!parsing_status.finalAttemptedJsonString) {\n             parsing_status.finalAttemptedJsonString = text;\n        }\n        return { parsing_status: parsing_status };\n    }\n}\n\n// --- n8n Usage ---\n// const inputItem = $input.item.json; \nconst inputItem = $input.first().json.choices[0].message.content;\n// const inputText = inputItem && inputItem.text ? inputItem.text : null;\nconst parsingResult = findAndParseJsonRobustly(inputItem);\n\nreturn parsingResult;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1424,
+        400
+      ],
+      "id": "97d111dc-f0ee-404c-ac54-3c5e5ae05f35",
+      "name": "Clean result-3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3463285b-8f39-4024-af05-7a1cec3def4c",
+              "leftValue": "={{ $json.headers.authorization }}",
+              "rightValue": 1514329989,
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        944,
+        -432
+      ],
+      "id": "f62a73f2-a077-43df-9e68-a456d8e782ef",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8321c02e-a4c7-4ec9-915d-e34fbbc2c9eb",
+              "name": "headers.authorization",
+              "value": "={{ $json.headers.authorization }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        768,
+        -432
+      ],
+      "id": "eb6b4c57-79e8-458e-aeaf-1380981c6429",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.JWT_AUTH_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Tapis-Token",
+              "value": "={{ $json.access_token }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        -432
+      ],
+      "id": "425a3564-21be-4e56-8250-0aeb5498524a",
+      "name": "HTTP Request-"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3463285b-8f39-4024-af05-7a1cec3def4c",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1424,
+        -432
+      ],
+      "id": "8b8458ee-80e4-4843-992f-b723a9d2ec99",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n\"status\": \"error\", \"message\": \"Bad Request, Tapis Token is requiered.\"\n}",
+        "options": {
+          "responseCode": 400,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1792,
+        -416
+      ],
+      "id": "e9fcfed3-73a6-4b26-b73c-39897ab52f91",
+      "name": "400 Bad Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fullAuthHeader = $input.first().json.headers.authorization\nconst pureJwtToken = fullAuthHeader ? fullAuthHeader.split(' ')[1] : null;\n\nreturn [{\n    json: {\n        // ... otros datos ...\n        access_token: pureJwtToken \n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -432
+      ],
+      "id": "5d856c8f-58cc-45de-80fb-eaf69328ca38",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n\"status\": \"error\", \"message\": \"Invalid Tapis Token or Expired.\"\n}",
+        "options": {
+          "responseCode": 401,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1632,
+        -416
+      ],
+      "id": "277653e1-1022-4b18-9eb1-4d0b86ead7c0",
+      "name": "401 Unauthorized"
+    },
+    {
+      "parameters": {
+        "content": "## Verify Tapis Token\n",
+        "height": 192,
+        "width": 656
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        752,
+        -480
+      ],
+      "typeVersion": 1,
+      "id": "d4251289-d518-46cb-a238-88925e68757e",
+      "name": "Sticky Note3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Prompt-1": {
+      "main": [
+        [
+          {
+            "node": "Concatenate Prompt-1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prompt-3": {
+      "main": [
+        [
+          {
+            "node": "Concatenate Prompt-3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prompt-2": {
+      "main": [
+        [
+          {
+            "node": "Concatenate Prompt-2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request-1": {
+      "main": [
+        [
+          {
+            "node": "Clean result-1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request-2": {
+      "main": [
+        [
+          {
+            "node": "Clean result-2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean result-1": {
+      "main": [
+        [
+          {
+            "node": "Prompt-2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean result-2": {
+      "main": [
+        [
+          {
+            "node": "Prompt-3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request-3": {
+      "main": [
+        [
+          {
+            "node": "Clean result-3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Concatenate Prompt-1": {
+      "main": [
+        [
+          {
+            "node": "Format Cleaner-1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Concatenate Prompt-2": {
+      "main": [
+        [
+          {
+            "node": "Format Cleaner-2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Concatenate Prompt-3": {
+      "main": [
+        [
+          {
+            "node": "Format Cleaner-3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Cleaner-1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request-1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Cleaner-2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request-2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Cleaner-3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request-3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean result-3": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "400 Bad Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request-": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request-",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Prompt-1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6e91d703-99bd-4c7d-91e0-2ef0ea8bca65",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d0b197373ade88a4d1f300e9e9b6eda83302b533184a53ddf8a2e4b4f85c6a93"
+  },
+  "id": "0YZfnBKQCZo2XfcJ",
+  "tags": []
+}
