@@ -16,3 +16,14 @@ The Environment Variables must be configured prior any execution
 
 
 ### Deployment
+
+#### Build
+
+```
+sudo docker build --no-cache -t extract_agent:latest .
+```
+
+#### Execute
+```
+sudo docker run -it --rm -p 5678:5678 extract_agent:latest
+```
