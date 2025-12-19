@@ -16,9 +16,9 @@ The Environment Variables must be configured prior any execution
 | `AI_MODEL`           | Example: "Llama-4, Gemini-2.0"      |    Yes   |
 | `N8N_ENCRYPTION_KEY` | To encrypt values inside n8n        |    No    |
 
-##### WEBHOOK_URL:
+##### WEBHOOK_URL
 
-Must have in mind the field 'webhookS' inside the workflow `JSON` file, and must be written and consumed in this format: `https://{WEBHOOK_URL}/webhook/{webhookId}`
+Must have in mind the field 'webhook' inside the workflow `JSON` file, and must be written and consumed in this format: `https://{WEBHOOK_URL}/webhook/{webhookId}`
 
 ## Deployment:
 
