@@ -38,7 +38,7 @@ sudo docker run -it --rm -p 5678:5678 --env-file Env/.env extract_agent:latest
 
 ##### Run on Background
 ```
-sudo docker run -d --name extract_agent --env-file Env/.env -p 5678:5678 extract_agent:latest
+sudo docker run -d --name extract_agent --env-file Env/.env -p 5678:5678 --restart unless-stopped extract_agent:latest
 ```
 
 ## Note:
