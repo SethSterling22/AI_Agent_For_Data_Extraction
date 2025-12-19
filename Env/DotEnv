@@ -1,9 +1,0 @@
-# API path for auth Token ("/v3/oauth2/clients")
-JWT_AUTH_URL=
-
-# URL to make HTTP requests
-AI_CREDENTIALS=
-# Bearer "..."
-AI_TOKEN=
-# Llama-4...
-AI_MODEL=
